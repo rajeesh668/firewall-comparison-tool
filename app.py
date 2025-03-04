@@ -58,7 +58,6 @@ ALL_COLUMNS = list(set(FORTINET_COLS + PALOALTO_COLS + SONICWALL_COLS))
 
 ########################################################
 # 4) HELPER: EXTRACT HIGHEST FROM SLASH-STRINGS
-# e.g. "39 / 39 / 26.5" => 39.0
 ########################################################
 def extract_max_throughput(value):
     if isinstance(value, str):
@@ -88,20 +87,27 @@ st.markdown(
     """
     <h1 style='text-align: center; color: green;'>Firewall Comparison Tool</h1>
     <h4 style='text-align: right;'>Developed by Rajeesh</h4>
+
     <style>
-        /* Make all tables responsive & avoid mid-word breaks */
-        table {
-            table-layout: auto !important; /* auto layout for flexible columns */
-            width: 100% !important;        /* fills entire container */
-        }
-        th, td {
-            white-space: pre-wrap !important;  /* wrap lines but no mid-word splits */
-            word-break: normal !important;
-            overflow-wrap: normal !important;
-        }
-        th {
-            text-align: center !important;     /* center align headers */
-        }
+    /* Force table to never split words. 
+       If columns get too narrow, horizontal scroll will appear. */
+    [data-testid="stTable"] {
+        display: block !important;          /* let table be block-level to allow scroll */
+        overflow-x: auto !important;       /* horizontal scroll if needed */
+        width: 100% !important;
+    }
+
+    table {
+        width: 100% !important;
+        table-layout: auto !important;     /* auto layout for flexible columns */
+    }
+
+    th, td {
+        white-space: nowrap !important;    /* never break words within columns */
+        word-break: normal !important;     
+        overflow-wrap: normal !important;
+        text-align: center !important;     /* center text for neatness */
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -137,6 +143,7 @@ if "Model" not in use_df.columns or use_df["Model"].dropna().empty:
     st.stop()
 
 selected_model = st.selectbox(f"Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
+
 comp_row = use_df.loc[use_df["Model"] == selected_model].iloc[0]
 
 st.write(f"## Selected {selected_vendor} Model Details")
@@ -203,7 +210,7 @@ if not manual_select:
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
-        selected_vendor,
+        selected_vendor,  
         comp_row,
         chosen_model,
         chosen_model["Model"],
@@ -226,7 +233,7 @@ else:
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
-            selected_vendor,
+            selected_vendor,  
             comp_row,
             chosen_model,
             chosen_sophos_model,
