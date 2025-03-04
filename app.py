@@ -214,6 +214,7 @@ if not manual_select:
     chosen_model = filtered_sophos.loc[idx_min]
 
   st.write("## Suggested Sophos Model")
+
 st.markdown(
     """
     <style>
@@ -224,7 +225,23 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+st.write("## Chosen Sophos Model")
+
+st.markdown(
+    """
+    <style>
+        table { width: 100% !important; }
+        th { text-align: center !important; word-break: keep-all; }
+        td { word-wrap: break-word !important; white-space: normal !important; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.table(chosen_model.to_frame().T)
+
+
 
 
     st.write("## Matching Score")
