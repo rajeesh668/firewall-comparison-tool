@@ -8,6 +8,7 @@ import re
 try:
     fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
     paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
+    sonicwall_file_path = st.secrets["SONICWALL_CSV_URL"]  # NEWLY ADDED
     sophos_file_path   = st.secrets["SOPHOS_CSV_URL"]
 except KeyError as e:
     st.error(f"Missing secret: {e}. Please configure in Streamlit Cloud → Secrets.")
@@ -26,6 +27,7 @@ def load_csv_data(file_url, vendor_name):
 
 fortinet_data = load_csv_data(fortinet_file_path, "Fortinet")
 paloalto_data = load_csv_data(paloalto_file_path, "Palo Alto")
+sonicwall_data = load_csv_data(sonicwall_file_path, "SonicWall")  # NEWLY ADDED
 sophos_data   = load_csv_data(sophos_file_path, "Sophos")
 
 ########################################################
@@ -45,8 +47,14 @@ PALOALTO_COLS = [
     "IPsec VPN Throughput (Gbps)"
 ]
 
-# We'll parse the union of these for Sophos as well
-ALL_COLUMNS = list(set(FORTINET_COLS + PALOALTO_COLS))
+SONICWALL_COLS = [
+    "Firewall Throughput (Gbps)",
+    "IPS Throughput (Gbps)",  # NEWLY ADDED for SonicWall comparison
+    "Threat Protection Throughput (Gbps)",
+    "IPsec VPN Throughput (Gbps)"
+]
+
+ALL_COLUMNS = list(set(FORTINET_COLS + PALOALTO_COLS + SONICWALL_COLS))
 
 ########################################################
 # 4) HELPER: EXTRACT HIGHEST FROM SLASH-STRINGS
@@ -67,9 +75,10 @@ def parse_and_convert(df, col_list):
             df[c] = df[c].apply(extract_max_throughput)
             df[c] = pd.to_numeric(df[c], errors='coerce')
 
-# Parse for Fortinet, PaloAlto, then unify for Sophos
+# Parse for all vendors
 parse_and_convert(fortinet_data, FORTINET_COLS)
 parse_and_convert(paloalto_data, PALOALTO_COLS)
+parse_and_convert(sonicwall_data, SONICWALL_COLS)  # NEWLY ADDED
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
@@ -96,16 +105,13 @@ if selected_vendor == "Fortinet":
 elif selected_vendor == "Palo Alto":
     use_df = paloalto_data
     use_cols = PALOALTO_COLS
+elif selected_vendor == "SonicWall":
+    use_df = sonicwall_data  # NEWLY ADDED
+    use_cols = SONICWALL_COLS  # NEWLY ADDED
 else:
-    # SonicWall => fallback
     use_df = pd.DataFrame()
     use_cols = []
 
-if selected_vendor == "SonicWall":
-    st.warning("Please connect to StarLiNK Presales Consultant.")
-    st.stop()
-
-# If empty => no data
 if use_df.empty:
     st.warning(f"No {selected_vendor} data found.")
     st.stop()
@@ -155,7 +161,6 @@ def build_matching_table(vendor_name, vendor_row, sophos_row, sophos_model_name,
 # 9) AUTO LOGIC (if manual_select==False)
 ########################################################
 if not manual_select:
-    # filter sophos => ANY col >= comp_row
     mask_any = pd.Series([False]*len(sophos_data), index=sophos_data.index)
 
     for i, s_row in sophos_data.iterrows():
@@ -175,25 +180,15 @@ if not manual_select:
         st.write("Please connect to StarLiNK Presales Consultant..")
         st.stop()
 
-    # among these, pick minimal firewall throughput
-    if "Firewall Throughput (Gbps)" not in filtered_sophos.columns:
-        st.write("No 'Firewall Throughput (Gbps)' col in filtered set.")
-        st.stop()
-
-    sub = filtered_sophos[ filtered_sophos["Firewall Throughput (Gbps)"].notnull() ]
-    if sub.empty:
-        st.write("No valid firewall throughput in the filtered set.")
-        st.stop()
-
-    idx_min = sub["Firewall Throughput (Gbps)"].idxmin()
-    chosen_model = sub.loc[idx_min]
+    idx_min = filtered_sophos["Firewall Throughput (Gbps)"].idxmin()
+    chosen_model = filtered_sophos.loc[idx_min]
 
     st.write("## Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
-        selected_vendor,     # e.g. 'Fortinet' or 'Palo Alto'
+        selected_vendor,  
         comp_row,
         chosen_model,
         chosen_model["Model"],
@@ -206,10 +201,6 @@ if not manual_select:
 ########################################################
 else:
     st.write("## Select a Sophos Model Manually")
-    if "Model" not in sophos_data.columns or sophos_data["Model"].dropna().empty:
-        st.error("No Sophos data available!")
-        st.stop()
-
     chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
     if chosen_sophos_model:
@@ -220,7 +211,7 @@ else:
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
-            selected_vendor,   # 'Fortinet' or 'Palo Alto'
+            selected_vendor,  
             comp_row,
             chosen_model,
             chosen_sophos_model,
