@@ -2,28 +2,43 @@ import streamlit as st
 import pandas as pd
 
 # Load CSV URLs from Streamlit Secrets
-fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
-paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
-sophos_file_path = st.secrets["SOPHOS_CSV_URL"]
-
-# Read CSV files
 try:
-    fortinet_data = pd.read_csv(fortinet_file_path)
-except Exception as e:
-    st.error(f"Could not load Fortinet data: {e}")
-    fortinet_data = pd.DataFrame()
+    fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
+    paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
+    sophos_file_path = st.secrets["SOPHOS_CSV_URL"]
+except KeyError as e:
+    st.error(f"Missing secret: {e}. Please configure secrets in Streamlit Cloud.")
+    st.stop()
 
-try:
-    paloalto_data = pd.read_csv(paloalto_file_path)
-except Exception as e:
-    st.error(f"Could not load Palo Alto data: {e}")
-    paloalto_data = pd.DataFrame()
+# Read data
+def load_data(file_url):
+    try:
+        return pd.read_csv(file_url)
+    except Exception as e:
+        st.error(f"Could not load data from {file_url}: {e}")
+        return pd.DataFrame()  # Return empty DataFrame to prevent errors
 
-try:
-    sophos_data = pd.read_csv(sophos_file_path)
-except Exception as e:
-    st.error(f"Could not load Sophos data: {e}")
-    sophos_data = pd.DataFrame()
+fortinet_data = load_data(fortinet_file_path)
+paloalto_data = load_data(paloalto_file_path)
+sophos_data = load_data(sophos_file_path)
+
+# Debugging: Show sample data
+st.write("### Fortinet Data Sample:")
+st.write(fortinet_data.head())
+
+st.write("### Palo Alto Data Sample:")
+st.write(paloalto_data.head())
+
+st.write("### Sophos Data Sample:")
+st.write(sophos_data.head())
+
+# Ensure data loaded successfully
+if fortinet_data.empty:
+    st.error("⚠️ Fortinet data is empty! Please check if the file is accessible.")
+if paloalto_data.empty:
+    st.error("⚠️ Palo Alto data is empty! Please check if the file is accessible.")
+if sophos_data.empty:
+    st.error("⚠️ Sophos data is empty! Please check if the file is accessible.")
 
 
 ########################################################
