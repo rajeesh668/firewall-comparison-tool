@@ -213,8 +213,19 @@ if not manual_select:
     idx_min = filtered_sophos["Firewall Throughput (Gbps)"].idxmin()
     chosen_model = filtered_sophos.loc[idx_min]
 
-    st.write("## Suggested Sophos Model")
-    st.table(chosen_model.to_frame().T)
+  st.write("## Suggested Sophos Model")
+st.markdown(
+    """
+    <style>
+        table { width: 100% !important; }
+        th { text-align: center !important; word-break: keep-all; }
+        td { word-wrap: break-word !important; white-space: normal !important; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+st.table(chosen_model.to_frame().T)
+
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
@@ -237,7 +248,18 @@ else:
         chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
 
         st.write("## Chosen Sophos Model")
-        st.table(chosen_model.to_frame().T)
+st.markdown(
+    """
+    <style>
+        table { width: 100% !important; }
+        th { text-align: center !important; word-break: keep-all; }
+        td { word-wrap: break-word !important; white-space: normal !important; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+st.table(chosen_model.to_frame().T)
+
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
