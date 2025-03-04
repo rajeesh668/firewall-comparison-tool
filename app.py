@@ -58,6 +58,7 @@ ALL_COLUMNS = list(set(FORTINET_COLS + PALOALTO_COLS + SONICWALL_COLS))
 
 ########################################################
 # 4) HELPER: EXTRACT HIGHEST FROM SLASH-STRINGS
+# e.g. "39 / 39 / 26.5" => 39.0
 ########################################################
 def extract_max_throughput(value):
     if isinstance(value, str):
@@ -81,32 +82,29 @@ parse_and_convert(sonicwall_data, SONICWALL_COLS)  # NEWLY ADDED
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Title + Table CSS
+# 6) UI Title + Table CSS (No mid-word breaks, no scroll)
 ########################################################
 st.markdown(
     """
     <h1 style='text-align: center; color: green;'>Firewall Comparison Tool</h1>
     <h4 style='text-align: right;'>Developed by Rajeesh</h4>
-
     <style>
-    /* Force table to never split words. 
-       If columns get too narrow, horizontal scroll will appear. */
+    /* Remove horizontal scrollbar & let page expand if needed */
     [data-testid="stTable"] {
-        display: block !important;          /* let table be block-level to allow scroll */
-        overflow-x: auto !important;       /* horizontal scroll if needed */
+        overflow-x: visible !important; /* no horizontal scroll */
         width: 100% !important;
     }
 
     table {
+        table-layout: auto !important; /* adapt columns based on content */
         width: 100% !important;
-        table-layout: auto !important;     /* auto layout for flexible columns */
     }
 
     th, td {
-        white-space: nowrap !important;    /* never break words within columns */
-        word-break: normal !important;     
+        white-space: pre-wrap !important; /* wrap lines only at spaces */
+        word-break: normal !important;    /* never break mid-word */
         overflow-wrap: normal !important;
-        text-align: center !important;     /* center text for neatness */
+        text-align: left !important;      /* or 'center' if you prefer */
     }
     </style>
     """,
@@ -142,7 +140,10 @@ if "Model" not in use_df.columns or use_df["Model"].dropna().empty:
     st.warning(f"No models found in {selected_vendor} data.")
     st.stop()
 
-selected_model = st.selectbox(f"Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
+selected_model = st.selectbox(
+    f"Select a {selected_vendor} Model",
+    use_df["Model"].dropna().unique()
+)
 
 comp_row = use_df.loc[use_df["Model"] == selected_model].iloc[0]
 
@@ -210,7 +211,7 @@ if not manual_select:
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
-        selected_vendor,  
+        selected_vendor,
         comp_row,
         chosen_model,
         chosen_model["Model"],
@@ -223,17 +224,22 @@ if not manual_select:
 ########################################################
 else:
     st.write("## Select a Sophos Model Manually")
-    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
+    chosen_sophos_model = st.selectbox(
+        "Choose a Sophos Model",
+        sophos_data["Model"].dropna().unique()
+    )
 
     if chosen_sophos_model:
-        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+        chosen_model = sophos_data.loc[
+            sophos_data["Model"] == chosen_sophos_model
+        ].iloc[0]
 
         st.write("## Chosen Sophos Model")
         st.table(chosen_model.to_frame().T)
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
-            selected_vendor,  
+            selected_vendor,
             comp_row,
             chosen_model,
             chosen_sophos_model,
