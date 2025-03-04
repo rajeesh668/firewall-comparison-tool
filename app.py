@@ -1,15 +1,12 @@
 import streamlit as st
 import pandas as pd
-import re
 
-########################################################
-# 1) CSV PATHS (EDIT THESE)
-fortinet_file_path = "C:/Users/RajeeshNair/OneDrive - StarLink/Desktop/CyberSecurityComparison/Fortinet FW Models.csv"
-paloalto_file_path = "C:/Users/RajeeshNair/OneDrive - StarLink/Desktop/CyberSecurityComparison/PaloAlto Spec.csv"
-sophos_file_path   = "C:/Users/RajeeshNair/OneDrive - StarLink/Desktop/CyberSecurityComparison/Sophos_XGS_All_Models_Performance.csv"
+# Load CSV URLs from Streamlit Secrets
+fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
+paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
+sophos_file_path = st.secrets["SOPHOS_CSV_URL"]
 
-########################################################
-# 2) READ THE CSV FILES
+# Read CSV files
 try:
     fortinet_data = pd.read_csv(fortinet_file_path)
 except Exception as e:
@@ -27,6 +24,7 @@ try:
 except Exception as e:
     st.error(f"Could not load Sophos data: {e}")
     sophos_data = pd.DataFrame()
+
 
 ########################################################
 # 3) VENDOR-SPECIFIC COLUMNS
