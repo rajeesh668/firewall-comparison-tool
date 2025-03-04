@@ -82,35 +82,15 @@ parse_and_convert(sonicwall_data, SONICWALL_COLS)  # NEWLY ADDED
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Title + Table CSS (No mid-word breaks, no scroll)
+# 6) UI Title
 ########################################################
 st.markdown(
     """
     <h1 style='text-align: center; color: green;'>Firewall Comparison Tool</h1>
     <h4 style='text-align: right;'>Developed by Rajeesh</h4>
-    <style>
-    /* Remove horizontal scrollbar & let page expand if needed */
-    [data-testid="stTable"] {
-        overflow-x: visible !important; /* no horizontal scroll */
-        width: 100% !important;
-    }
-
-    table {
-        table-layout: auto !important; /* adapt columns based on content */
-        width: 100% !important;
-    }
-
-    th, td {
-        white-space: pre-wrap !important; /* wrap lines only at spaces */
-        word-break: normal !important;    /* never break mid-word */
-        overflow-wrap: normal !important;
-        text-align: left !important;      /* or 'center' if you prefer */
-    }
-    </style>
     """,
     unsafe_allow_html=True
 )
-
 st.write("Select a vendor and model to find the best equivalent Sophos model.")
 
 ########################################################
@@ -140,10 +120,7 @@ if "Model" not in use_df.columns or use_df["Model"].dropna().empty:
     st.warning(f"No models found in {selected_vendor} data.")
     st.stop()
 
-selected_model = st.selectbox(
-    f"Select a {selected_vendor} Model",
-    use_df["Model"].dropna().unique()
-)
+selected_model = st.selectbox(f"Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
 
 comp_row = use_df.loc[use_df["Model"] == selected_model].iloc[0]
 
@@ -211,7 +188,7 @@ if not manual_select:
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
-        selected_vendor,
+        selected_vendor,  
         comp_row,
         chosen_model,
         chosen_model["Model"],
@@ -224,22 +201,17 @@ if not manual_select:
 ########################################################
 else:
     st.write("## Select a Sophos Model Manually")
-    chosen_sophos_model = st.selectbox(
-        "Choose a Sophos Model",
-        sophos_data["Model"].dropna().unique()
-    )
+    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
     if chosen_sophos_model:
-        chosen_model = sophos_data.loc[
-            sophos_data["Model"] == chosen_sophos_model
-        ].iloc[0]
+        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
 
         st.write("## Chosen Sophos Model")
         st.table(chosen_model.to_frame().T)
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
-            selected_vendor,
+            selected_vendor,  
             comp_row,
             chosen_model,
             chosen_sophos_model,
