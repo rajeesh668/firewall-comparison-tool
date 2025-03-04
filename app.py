@@ -82,31 +82,26 @@ parse_and_convert(sonicwall_data, SONICWALL_COLS)  # NEWLY ADDED
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Title
+# 6) UI Title + Table CSS
 ########################################################
 st.markdown(
     """
     <h1 style='text-align: center; color: green;'>Firewall Comparison Tool</h1>
     <h4 style='text-align: right;'>Developed by Rajeesh</h4>
-    """,
-    unsafe_allow_html=True
-)
-
-# Add CSS to make tables auto-fit & prevent mid-word breaks
-st.markdown(
-    """
     <style>
-    table {
-        width: 100% !important;
-    }
-    th {
-        text-align: center !important;
-        word-break: keep-all !important;
-    }
-    td {
-        word-wrap: break-word !important;
-        white-space: normal !important;
-    }
+        /* Make all tables responsive & avoid mid-word breaks */
+        table {
+            table-layout: auto !important; /* auto layout for flexible columns */
+            width: 100% !important;        /* fills entire container */
+        }
+        th, td {
+            white-space: pre-wrap !important;  /* wrap lines but no mid-word splits */
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+        }
+        th {
+            text-align: center !important;     /* center align headers */
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -142,7 +137,6 @@ if "Model" not in use_df.columns or use_df["Model"].dropna().empty:
     st.stop()
 
 selected_model = st.selectbox(f"Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
-
 comp_row = use_df.loc[use_df["Model"] == selected_model].iloc[0]
 
 st.write(f"## Selected {selected_vendor} Model Details")
@@ -209,7 +203,7 @@ if not manual_select:
 
     st.write("## Matching Score")
     dev_table = build_matching_table(
-        selected_vendor,  
+        selected_vendor,
         comp_row,
         chosen_model,
         chosen_model["Model"],
@@ -232,7 +226,7 @@ else:
 
         st.write("## Matching Score")
         dev_table = build_matching_table(
-            selected_vendor,  
+            selected_vendor,
             comp_row,
             chosen_model,
             chosen_sophos_model,
