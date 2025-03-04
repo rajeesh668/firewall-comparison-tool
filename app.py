@@ -82,16 +82,46 @@ parse_and_convert(sonicwall_data, SONICWALL_COLS)  # NEWLY ADDED
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Title
+# 6) UI Title & Table Formatting Fixes
 ########################################################
 st.markdown(
     """
     <h1 style='text-align: center; color: green;'>Firewall Comparison Tool</h1>
     <h4 style='text-align: right;'>Developed by Rajeesh</h4>
+
+    <style>
+        /* Ensure table fits browser width */
+        [data-testid="stTable"] {
+            width: 100% !important;
+            overflow-x: auto;
+            display: block;
+        }
+
+        /* Prevent breaking words mid-word */
+        table td, table th {
+            word-wrap: break-word !important;
+            white-space: normal !important;
+        }
+
+        /* Keep column headers readable */
+        th {
+            word-break: keep-all !important;
+            overflow-wrap: break-word !important;
+            text-align: center;
+        }
+
+        /* Ensure column width adjusts dynamically */
+        table {
+            table-layout: auto !important;
+            width: 100% !important;
+        }
+    </style>
     """,
     unsafe_allow_html=True
 )
+
 st.write("Select a vendor and model to find the best equivalent Sophos model.")
+
 
 ########################################################
 # 7) CHOOSE A VENDOR
