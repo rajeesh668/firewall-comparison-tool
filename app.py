@@ -1,48 +1,36 @@
 import streamlit as st
 import pandas as pd
+import re
 
-# Load CSV URLs from Streamlit Secrets
+########################################################
+# 1) Load CSV Paths from Streamlit Secrets
+########################################################
 try:
     fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
     paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
-    sophos_file_path = st.secrets["SOPHOS_CSV_URL"]
+    sophos_file_path   = st.secrets["SOPHOS_CSV_URL"]
 except KeyError as e:
-    st.error(f"Missing secret: {e}. Please configure secrets in Streamlit Cloud.")
+    st.error(f"Missing secret: {e}. Please configure in Streamlit Cloud → Secrets.")
     st.stop()
 
-# Read data
-def load_data(file_url):
+########################################################
+# 2) READ THE CSV FILES
+########################################################
+def load_csv_data(file_url, vendor_name):
+    """Safely load CSV data. Return an empty DataFrame if there's an error."""
     try:
         return pd.read_csv(file_url)
     except Exception as e:
-        st.error(f"Could not load data from {file_url}: {e}")
-        return pd.DataFrame()  # Return empty DataFrame to prevent errors
+        st.error(f"Could not load {vendor_name} data: {e}")
+        return pd.DataFrame()
 
-fortinet_data = load_data(fortinet_file_path)
-paloalto_data = load_data(paloalto_file_path)
-sophos_data = load_data(sophos_file_path)
-
-# Debugging: Show sample data
-st.write("### Fortinet Data Sample:")
-st.write(fortinet_data.head())
-
-st.write("### Palo Alto Data Sample:")
-st.write(paloalto_data.head())
-
-st.write("### Sophos Data Sample:")
-st.write(sophos_data.head())
-
-# Ensure data loaded successfully
-if fortinet_data.empty:
-    st.error("⚠️ Fortinet data is empty! Please check if the file is accessible.")
-if paloalto_data.empty:
-    st.error("⚠️ Palo Alto data is empty! Please check if the file is accessible.")
-if sophos_data.empty:
-    st.error("⚠️ Sophos data is empty! Please check if the file is accessible.")
-
+fortinet_data = load_csv_data(fortinet_file_path, "Fortinet")
+paloalto_data = load_csv_data(paloalto_file_path, "Palo Alto")
+sophos_data   = load_csv_data(sophos_file_path, "Sophos")
 
 ########################################################
 # 3) VENDOR-SPECIFIC COLUMNS
+########################################################
 FORTINET_COLS = [
     "Firewall Throughput (Gbps)",
     "IPS Throughput (Gbps)",
@@ -70,17 +58,13 @@ def extract_max_throughput(value):
         return max(nums) if nums else None
     return value
 
-# We'll parse each relevant column for each vendor DF
-
 ########################################################
-# 5) PARSE HIGHEST VALUE + CONVERT TO NUMERIC
+# 5) PARSE + CONVERT (slash -> numeric)
 ########################################################
 def parse_and_convert(df, col_list):
     for c in col_list:
         if c in df.columns:
-            # parse slash-based strings => highest
             df[c] = df[c].apply(extract_max_throughput)
-            # then convert to numeric
             df[c] = pd.to_numeric(df[c], errors='coerce')
 
 # Parse for Fortinet, PaloAlto, then unify for Sophos
@@ -160,8 +144,8 @@ def build_matching_table(vendor_name, vendor_row, sophos_row, sophos_model_name,
     table = pd.DataFrame(
         dev_dict,
         index=[
-            f"{selected_model} Value",       # e.g. FG-70F Value
-            f"{sophos_model_name} Value",   # e.g. XGS88 Value
+            f"{selected_model} Value",
+            f"{sophos_model_name} Value",
             "Matching (%)"
         ]
     )
