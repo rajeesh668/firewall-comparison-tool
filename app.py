@@ -195,7 +195,7 @@ if not manual_select:
         use_cols
     )
     st.table(dev_table)
-st.success(f"✅ Best match found: {chosen_model['Model']}")
+
 ########################################################
 # 10) MANUAL LOGIC
 ########################################################
