@@ -80,31 +80,7 @@ parse_and_convert(sonicwall_data, SONICWALL_COLS)
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Improvements (CSS)
-########################################################
-st.markdown("""
-    <style>
-    /* Compact table styling */
-    table {
-        font-size: 14px !important;
-        border-collapse: collapse !important;
-        width: 100% !important;
-    }
-    th, td {
-        padding: 8px !important;
-        text-align: center !important;
-        white-space: nowrap !important;  /* Prevent word splitting */
-    }
-    select {
-        font-size: 16px !important;
-        padding: 8px !important;
-        width: 100% !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-########################################################
-# 7) UI Title & Vendor Selection
+# 6) UI Title & Vendor Selection
 ########################################################
 st.markdown(
     """
@@ -138,9 +114,9 @@ st.write("## 🔍 Selected Model Details")
 st.table(comp_row.to_frame().T)
 
 ########################################################
-# 8) Compare Button
+# 7) Compare Button
 ########################################################
-if st.button("Compare Model"):
+if st.button("🔍 Compare Model"):
     mask_any = pd.Series([False]*len(sophos_data), index=sophos_data.index)
 
     for i, s_row in sophos_data.iterrows():
@@ -162,20 +138,45 @@ if st.button("Compare Model"):
     st.success(f"✅ Best match found: {chosen_model['Model']}")
 
     ########################################################
-    # 9) Side-by-Side Table Layout
+    # 8) Display Suggested Sophos Model & Matching Table
     ########################################################
-    col1, col2 = st.columns(2)
+    st.write("## 🔹 Suggested Sophos Model")
+    st.table(chosen_model.to_frame().T)
 
-    with col1:
-        st.write("## 🔹 Selected Model")
-        st.table(comp_row.to_frame().T)
+    def build_matching_table(vendor_name, vendor_row, sophos_row, sophos_model_name, relevant_cols):
+        dev_dict = {}
+        for c in relevant_cols:
+            v_val = vendor_row.get(c, None)
+            s_val = sophos_row.get(c, None)
+            if pd.notnull(v_val) and v_val != 0 and pd.notnull(s_val):
+                ratio = (s_val / v_val) * 100
+                ratio_str = f"{ratio:.1f}%"
+            else:
+                ratio_str = "N/A"
+            dev_dict[c] = [v_val, s_val, ratio_str]
 
-    with col2:
-        st.write("## 🔹 Suggested Sophos Model")
-        st.table(chosen_model.to_frame().T)
+        table = pd.DataFrame(
+            dev_dict,
+            index=[
+                f"{selected_model} Value",
+                f"{sophos_model_name} Value",
+                "Matching (%)"
+            ]
+        )
+        return table
+
+    st.write("## 📊 Matching Score")
+    dev_table = build_matching_table(
+        selected_vendor,  
+        comp_row,
+        chosen_model,
+        chosen_model["Model"],
+        use_cols
+    )
+    st.table(dev_table)
 
     ########################################################
-    # 10) Manual Selection
+    # 9) Manual Selection Option
     ########################################################
     st.markdown("### ✍️ Manually Select a Sophos Model")
     manual_select = st.checkbox("Manually select Sophos model?")
@@ -183,27 +184,16 @@ if st.button("Compare Model"):
         chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
         if chosen_sophos_model:
             chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+
             st.write("## 🎯 Chosen Sophos Model")
             st.table(chosen_model.to_frame().T)
 
-# 11) MANUAL LOGIC
-########################################################
-else:
-    st.write("## Select a Sophos Model Manually")
-    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
-
-    if chosen_sophos_model:
-        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
-
-        st.write("## Chosen Sophos Model")
-        st.table(chosen_model.to_frame().T)
-
-        st.write("## Matching Score")
-        dev_table = build_matching_table(
-            selected_vendor,  
-            comp_row,
-            chosen_model,
-            chosen_sophos_model,
-            use_cols
-        )
-        st.table(dev_table)
+            st.write("## 📊 Matching Score")
+            dev_table = build_matching_table(
+                selected_vendor,  
+                comp_row,
+                chosen_model,
+                chosen_sophos_model,
+                use_cols
+            )
+            st.table(dev_table)
