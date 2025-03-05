@@ -84,7 +84,7 @@ parse_and_convert(sophos_data, ALL_COLUMNS)
 ########################################################
 st.markdown(
     """
-    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.7</small></h1>
+    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.8</small></h1>
     <h4 style='text-align: right;'>✅ Developed by Rajeesh</h4>
     """,
     unsafe_allow_html=True
@@ -165,9 +165,15 @@ if manual_select:
     chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
     if chosen_sophos_model:
-        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
-        st.write("## 🎯 Chosen Sophos Model")
-        st.table(chosen_model.to_frame().T)
+        chosen_model_row = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model]
 
-        st.write("## 📊 Matching Score Table (Manual Selection)")
-        st.table(build_matching_table(comp_row, chosen_model, use_cols))
+        if not chosen_model_row.empty:
+            chosen_model = chosen_model_row.iloc[0]
+
+            st.write("## 🎯 Chosen Sophos Model")
+            st.table(chosen_model.to_frame().T)
+
+            st.write("## 📊 Matching Score Table (Manual Selection)")
+            st.table(build_matching_table(comp_row, chosen_model, use_cols))
+        else:
+            st.error("❌ Invalid Sophos model selected!")
