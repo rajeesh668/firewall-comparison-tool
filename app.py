@@ -58,7 +58,6 @@ ALL_COLUMNS = list(set(FORTINET_COLS + PALOALTO_COLS + SONICWALL_COLS))
 
 ########################################################
 # 4) HELPER: EXTRACT HIGHEST FROM SLASH-STRINGS
-# e.g. "39 / 39 / 26.5" => 39.0
 ########################################################
 def extract_max_throughput(value):
     if isinstance(value, str):
@@ -85,7 +84,7 @@ parse_and_convert(sophos_data, ALL_COLUMNS)
 ########################################################
 st.markdown(
     """
-    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.6</small></h1>
+    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.7</small></h1>
     <h4 style='text-align: right;'>✅ Developed by Rajeesh</h4>
     """,
     unsafe_allow_html=True
@@ -118,75 +117,27 @@ st.table(comp_row.to_frame().T)
 # 7) Compare Button
 ########################################################
 if st.button("🔍 Compare Model"):
-    mask_any = pd.Series([False]*len(sophos_data), index=sophos_data.index)
-
-    for i, s_row in sophos_data.iterrows():
-        for c in use_cols:
-            if c in comp_row and c in s_row and pd.notnull(comp_row[c]) and pd.notnull(s_row[c]):
-                if s_row[c] >= comp_row[c]:
-                    mask_any[i] = True
-                    break
-
+    mask_any = sophos_data[use_cols].ge(comp_row[use_cols]).any(axis=1)
     filtered_sophos = sophos_data[mask_any]
 
     if filtered_sophos.empty:
         st.error("⚠️ No suitable Sophos model found. Please consult StarLiNK Presales Consultant.")
         st.stop()
 
-    idx_min = filtered_sophos["Firewall Throughput (Gbps)"].idxmin()
-    chosen_model = filtered_sophos.loc[idx_min]
-
+    chosen_model = filtered_sophos.loc[filtered_sophos["Firewall Throughput (Gbps)"].idxmin()]
     st.success(f"✅ Best match found: {chosen_model['Model']}")
 
-    ########################################################
-    # 8) Display Suggested Sophos Model & Matching Table
-    ########################################################
     st.write("## 🔹 Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
 
-    def build_matching_table(vendor_row, sophos_row, relevant_cols):
-        dev_dict = {}
-        for c in relevant_cols:
-            v_val = vendor_row.get(c, None)
-            s_val = sophos_row.get(c, None)
-            if pd.notnull(v_val) and v_val != 0 and pd.notnull(s_val):
-                ratio = (s_val / v_val) * 100
-                ratio_str = f"{ratio:.1f}%"
-            else:
-                ratio_str = "N/A"
-            dev_dict[c] = [v_val, s_val, ratio_str]
+########################################################
+# 8) Manual Selection (Fixed)
+########################################################
+manual_select = st.checkbox("Manually select Sophos model?")
+if manual_select:
+    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
-        table = pd.DataFrame(
-            dev_dict,
-            index=[
-                f"{selected_model} Value",
-                f"{chosen_model['Model']} Value",
-                "Matching (%)"
-            ]
-        )
-        return table
-
-    st.write("## 📊 Matching Score")
-    dev_table = build_matching_table(comp_row, chosen_model, use_cols)
-    st.table(dev_table)
-
-    ########################################################
-    # 9) Manual Selection (Fix for Reset Issue)
-    ########################################################
-    manual_select = st.checkbox("Manually select Sophos model?")
-
-    if manual_select:
-        chosen_sophos_model = st.selectbox(
-            "Choose a Sophos Model", 
-            sophos_data["Model"].dropna().unique()
-        )
-
-        if chosen_sophos_model:
-            chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
-
-            st.write("## 🎯 Chosen Sophos Model")
-            st.table(chosen_model.to_frame().T)
-
-            st.write("## 📊 Matching Score")
-            dev_table = build_matching_table(comp_row, chosen_model, use_cols)
-            st.table(dev_table)
+    if chosen_sophos_model:
+        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+        st.write("## 🎯 Chosen Sophos Model")
+        st.table(chosen_model.to_frame().T)
