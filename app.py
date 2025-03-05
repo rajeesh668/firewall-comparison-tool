@@ -176,18 +176,23 @@ if st.button("🔍 Compare Model"):
     st.table(dev_table)
 
     ########################################################
-    # 9) Manual Selection with Session State
+    # 9) Manual Selection (Fix for Reset Issue)
     ########################################################
     if "manual_select" not in st.session_state:
         st.session_state.manual_select = False
+        st.session_state.manual_sophos = None  # Store manual Sophos selection
 
     st.session_state.manual_select = st.checkbox("Manually select Sophos model?", st.session_state.manual_select)
 
     if st.session_state.manual_select:
-        chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique(), key="manual_sophos")
+        st.session_state.manual_sophos = st.selectbox(
+            "Choose a Sophos Model", 
+            sophos_data["Model"].dropna().unique(), 
+            key="manual_sophos"
+        )
 
-        if chosen_sophos_model:
-            chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+        if st.session_state.manual_sophos:
+            chosen_model = sophos_data.loc[sophos_data["Model"] == st.session_state.manual_sophos].iloc[0]
 
             st.write("## 🎯 Chosen Sophos Model")
             st.table(chosen_model.to_frame().T)
@@ -197,7 +202,7 @@ if st.button("🔍 Compare Model"):
                 selected_vendor,  
                 comp_row,
                 chosen_model,
-                chosen_sophos_model,
+                st.session_state.manual_sophos,
                 use_cols
             )
             st.table(dev_table)
