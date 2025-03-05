@@ -9,7 +9,7 @@ try:
     fortinet_file_path = st.secrets["FORTINET_CSV_URL"]
     paloalto_file_path = st.secrets["PALOALTO_CSV_URL"]
     sonicwall_file_path = st.secrets["SONICWALL_CSV_URL"]
-    sophos_file_path   = st.secrets["SOPHOS_CSV_URL"]
+    sophos_file_path = st.secrets["SOPHOS_CSV_URL"]
 except KeyError as e:
     st.error(f"Missing secret: {e}. Please configure in Streamlit Cloud → Secrets.")
     st.stop()
@@ -84,7 +84,7 @@ parse_and_convert(sophos_data, ALL_COLUMNS)
 ########################################################
 st.markdown(
     """
-    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.8</small></h1>
+    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.9</small></h1>
     <h4 style='text-align: right;'>✅ Developed by Rajeesh</h4>
     """,
     unsafe_allow_html=True
@@ -114,7 +114,34 @@ st.write("## 🔍 Selected Model Details")
 st.table(comp_row.to_frame().T)
 
 ########################################################
-# 7) Compare Button
+# 7) Matching Table Function (Avoids NameError)
+########################################################
+def build_matching_table(vendor_row, sophos_row, relevant_cols):
+    if sophos_row is None or vendor_row is None:
+        return pd.DataFrame()  # Avoid error if no data
+
+    dev_dict = {}
+    for c in relevant_cols:
+        v_val = vendor_row.get(c, None)
+        s_val = sophos_row.get(c, None)
+        if pd.notnull(v_val) and v_val != 0 and pd.notnull(s_val):
+            ratio = (s_val / v_val) * 100
+            ratio_str = f"{ratio:.1f}%"
+        else:
+            ratio_str = "N/A"
+        dev_dict[c] = [v_val, s_val, ratio_str]
+
+    return pd.DataFrame(
+        dev_dict,
+        index=[
+            f"{selected_model} Value",
+            f"{sophos_row['Model']} Value",
+            "Matching (%)"
+        ]
+    )
+
+########################################################
+# 8) Compare Button
 ########################################################
 if st.button("🔍 Compare Model"):
     mask_any = sophos_data[use_cols].ge(comp_row[use_cols]).any(axis=1)
@@ -130,30 +157,6 @@ if st.button("🔍 Compare Model"):
     st.write("## 🔹 Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
 
-    ########################################################
-    # 8) Matching Score (Deviation Table)
-    ########################################################
-    def build_matching_table(vendor_row, sophos_row, relevant_cols):
-        dev_dict = {}
-        for c in relevant_cols:
-            v_val = vendor_row.get(c, None)
-            s_val = sophos_row.get(c, None)
-            if pd.notnull(v_val) and v_val != 0 and pd.notnull(s_val):
-                ratio = (s_val / v_val) * 100
-                ratio_str = f"{ratio:.1f}%"
-            else:
-                ratio_str = "N/A"
-            dev_dict[c] = [v_val, s_val, ratio_str]
-
-        return pd.DataFrame(
-            dev_dict,
-            index=[
-                f"{selected_model} Value",
-                f"{chosen_model['Model']} Value",
-                "Matching (%)"
-            ]
-        )
-
     st.write("## 📊 Matching Score Table")
     st.table(build_matching_table(comp_row, chosen_model, use_cols))
 
@@ -165,7 +168,7 @@ if manual_select:
     chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
     if chosen_sophos_model:
-        chosen_model_row = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model]
+        chosen_model_row = sophos_data[sophos_data["Model"] == chosen_sophos_model]
 
         if not chosen_model_row.empty:
             chosen_model = chosen_model_row.iloc[0]
