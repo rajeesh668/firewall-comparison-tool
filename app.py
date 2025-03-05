@@ -185,7 +185,7 @@ if not manual_select:
 
     st.write("## Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
-st.success(f"✅ Best match found: {chosen_model['Model']}")
+
     st.write("## Matching Score")
     dev_table = build_matching_table(
         selected_vendor,  
@@ -195,7 +195,7 @@ st.success(f"✅ Best match found: {chosen_model['Model']}")
         use_cols
     )
     st.table(dev_table)
-
+st.success(f"✅ Best match found: {chosen_model['Model']}")
 ########################################################
 # 10) MANUAL LOGIC
 ########################################################
