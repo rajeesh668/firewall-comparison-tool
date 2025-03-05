@@ -130,8 +130,35 @@ if st.button("🔍 Compare Model"):
     st.write("## 🔹 Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
 
+    ########################################################
+    # 8) Matching Score (Deviation Table)
+    ########################################################
+    def build_matching_table(vendor_row, sophos_row, relevant_cols):
+        dev_dict = {}
+        for c in relevant_cols:
+            v_val = vendor_row.get(c, None)
+            s_val = sophos_row.get(c, None)
+            if pd.notnull(v_val) and v_val != 0 and pd.notnull(s_val):
+                ratio = (s_val / v_val) * 100
+                ratio_str = f"{ratio:.1f}%"
+            else:
+                ratio_str = "N/A"
+            dev_dict[c] = [v_val, s_val, ratio_str]
+
+        return pd.DataFrame(
+            dev_dict,
+            index=[
+                f"{selected_model} Value",
+                f"{chosen_model['Model']} Value",
+                "Matching (%)"
+            ]
+        )
+
+    st.write("## 📊 Matching Score Table")
+    st.table(build_matching_table(comp_row, chosen_model, use_cols))
+
 ########################################################
-# 8) Manual Selection (Fixed)
+# 9) Manual Selection (Fixed)
 ########################################################
 manual_select = st.checkbox("Manually select Sophos model?")
 if manual_select:
@@ -141,3 +168,6 @@ if manual_select:
         chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
         st.write("## 🎯 Chosen Sophos Model")
         st.table(chosen_model.to_frame().T)
+
+        st.write("## 📊 Matching Score Table (Manual Selection)")
+        st.table(build_matching_table(comp_row, chosen_model, use_cols))
