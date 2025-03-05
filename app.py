@@ -74,52 +74,77 @@ def parse_and_convert(df, col_list):
             df[c] = df[c].apply(extract_max_throughput)
             df[c] = pd.to_numeric(df[c], errors='coerce')
 
+# Parse for all vendors
 parse_and_convert(fortinet_data, FORTINET_COLS)
 parse_and_convert(paloalto_data, PALOALTO_COLS)
 parse_and_convert(sonicwall_data, SONICWALL_COLS)
 parse_and_convert(sophos_data, ALL_COLUMNS)
 
 ########################################################
-# 6) UI Title & Vendor Selection
+# 6) UI Title
 ########################################################
 st.markdown(
     """
-    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <small style='font-size:16px;'>V 1.9</small></h1>
-    <h4 style='text-align: right;'>✅ Developed by Rajeesh</h4>
+    <style>
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            background-color: #f8f8f8;
+            padding: 10px;
+            font-size: 14px;
+            color: #333;
+            border-top: 2px solid #ddd;
+        }
+    </style>
+    
+    <h1 style='text-align: center; color: green;'>🔥 Firewall Comparison Tool <span style="font-size: 16px;">V 2.0</span></h1>
+    <hr>
     """,
     unsafe_allow_html=True
 )
-st.write("Select a vendor and model to find the best equivalent Sophos model.")
+st.write("✅ Select a vendor and model to find the best equivalent Sophos model.")
 
+########################################################
+# 7) CHOOSE A VENDOR
+########################################################
 vendors = ["Fortinet", "Palo Alto", "SonicWall"]
-selected_vendor = st.selectbox("Select a Vendor", vendors)
+selected_vendor = st.selectbox("📌 Select a Vendor", vendors)
 
 if selected_vendor == "Fortinet":
-    use_df, use_cols = fortinet_data, FORTINET_COLS
+    use_df = fortinet_data
+    use_cols = FORTINET_COLS
 elif selected_vendor == "Palo Alto":
-    use_df, use_cols = paloalto_data, PALOALTO_COLS
+    use_df = paloalto_data
+    use_cols = PALOALTO_COLS
 elif selected_vendor == "SonicWall":
-    use_df, use_cols = sonicwall_data, SONICWALL_COLS
+    use_df = sonicwall_data
+    use_cols = SONICWALL_COLS
 else:
-    use_df, use_cols = pd.DataFrame(), []
+    use_df = pd.DataFrame()
+    use_cols = []
 
-if use_df.empty or "Model" not in use_df.columns:
-    st.warning(f"No models found for {selected_vendor}.")
+if use_df.empty:
+    st.warning(f"⚠️ No {selected_vendor} data found.")
     st.stop()
 
-selected_model = st.selectbox(f"Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
+selected_model = st.selectbox(f"📌 Select a {selected_vendor} Model", use_df["Model"].dropna().unique())
+
 comp_row = use_df.loc[use_df["Model"] == selected_model].iloc[0]
 
-st.write("## 🔍 Selected Model Details")
+st.write(f"## 📋 Selected {selected_vendor} Model Details")
 st.table(comp_row.to_frame().T)
 
 ########################################################
-# 7) Matching Table Function (Avoids NameError)
+# 8) Manual vs Automatic selection of Sophos
+########################################################
+manual_select = st.checkbox("🔍 Manually select Sophos model?")
+
+########################################################
+# Helper to build matching score table
 ########################################################
 def build_matching_table(vendor_row, sophos_row, relevant_cols):
-    if sophos_row is None or vendor_row is None:
-        return pd.DataFrame()  # Avoid error if no data
-
     dev_dict = {}
     for c in relevant_cols:
         v_val = vendor_row.get(c, None)
@@ -131,7 +156,7 @@ def build_matching_table(vendor_row, sophos_row, relevant_cols):
             ratio_str = "N/A"
         dev_dict[c] = [v_val, s_val, ratio_str]
 
-    return pd.DataFrame(
+    table = pd.DataFrame(
         dev_dict,
         index=[
             f"{selected_model} Value",
@@ -139,45 +164,53 @@ def build_matching_table(vendor_row, sophos_row, relevant_cols):
             "Matching (%)"
         ]
     )
+    return table
 
 ########################################################
-# 8) Compare Button
+# 9) AUTO LOGIC (if manual_select==False)
 ########################################################
-if st.button("🔍 Compare Model"):
-    mask_any = sophos_data[use_cols].ge(comp_row[use_cols]).any(axis=1)
+if not manual_select:
+    mask_any = pd.Series([False]*len(sophos_data), index=sophos_data.index)
+
+    for i, s_row in sophos_data.iterrows():
+        for c in use_cols:
+            if c not in comp_row or c not in s_row:
+                continue
+            f_val = comp_row[c]
+            so_val = s_row[c]
+            if pd.notnull(f_val) and pd.notnull(so_val):
+                if so_val >= f_val:
+                    mask_any[i] = True
+                    break
+
     filtered_sophos = sophos_data[mask_any]
 
     if filtered_sophos.empty:
-        st.error("⚠️ No suitable Sophos model found. Please consult StarLiNK Presales Consultant.")
+        st.write("⚠️ Please connect to StarLiNK Presales Consultant..")
         st.stop()
 
-    chosen_model = filtered_sophos.loc[filtered_sophos["Firewall Throughput (Gbps)"].idxmin()]
-    st.success(f"✅ Best match found: {chosen_model['Model']}")
+    idx_min = filtered_sophos["Firewall Throughput (Gbps)"].idxmin()
+    chosen_model = filtered_sophos.loc[idx_min]
 
-    st.write("## 🔹 Suggested Sophos Model")
+    st.success(f"🎉 Best matching model found: **{chosen_model['Model']}**! ✅")
+    st.write("## ✅ Suggested Sophos Model")
     st.table(chosen_model.to_frame().T)
 
-    st.write("## 📊 Matching Score Table")
+    st.write("## 📊 Matching Score")
     st.table(build_matching_table(comp_row, chosen_model, use_cols))
 
 ########################################################
-# 9) Manual Selection (Fixed)
+# 10) MANUAL LOGIC
 ########################################################
-manual_select = st.checkbox("Manually select Sophos model?")
-if manual_select:
-    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
+else:
+    chosen_sophos_model = st.selectbox("📌 Choose a Sophos Model", sophos_data["Model"].dropna().unique())
 
     if chosen_sophos_model:
-        chosen_model_row = sophos_data[sophos_data["Model"] == chosen_sophos_model]
+        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+        st.write("## ✅ Chosen Sophos Model")
+        st.table(chosen_model.to_frame().T)
 
-        if not chosen_model_row.empty:
-            chosen_model = chosen_model_row.iloc[0]
+        st.write("## 📊 Matching Score")
+        st.table(build_matching_table(comp_row, chosen_model, use_cols))
 
-            st.write("## 🎯 Chosen Sophos Model")
-            st.table(chosen_model.to_frame().T)
-
-            st.write("## 📊 Matching Score Table (Manual Selection)")
-            st.table(build_matching_table(comp_row, chosen_model, use_cols))
-        else:
-            st.error("❌ Invalid Sophos model selected!")
-            st.markdown("<div class='footer'>Developed by <b>Rajeesh - rajeesh@starlinkme.net</b></div>", unsafe_allow_html=True)
+st.markdown("<div class='footer'>Developed by <b>Rajeesh - rajeesh@starlinkme.net</b></div>", unsafe_allow_html=True)
