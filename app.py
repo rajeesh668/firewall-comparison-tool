@@ -186,13 +186,24 @@ if st.button("Compare Model"):
             st.write("## 🎯 Chosen Sophos Model")
             st.table(chosen_model.to_frame().T)
 
+# 11) MANUAL LOGIC
 ########################################################
-# 11) Dark Mode Toggle
-########################################################
-dark_mode = st.toggle("🌙 Enable Dark Mode")
-if dark_mode:
-    st.markdown("""
-        <style>
-        body { background-color: #1E1E1E; color: white; }
-        </style>
-    """, unsafe_allow_html=True)
+else:
+    st.write("## Select a Sophos Model Manually")
+    chosen_sophos_model = st.selectbox("Choose a Sophos Model", sophos_data["Model"].dropna().unique())
+
+    if chosen_sophos_model:
+        chosen_model = sophos_data.loc[sophos_data["Model"] == chosen_sophos_model].iloc[0]
+
+        st.write("## Chosen Sophos Model")
+        st.table(chosen_model.to_frame().T)
+
+        st.write("## Matching Score")
+        dev_table = build_matching_table(
+            selected_vendor,  
+            comp_row,
+            chosen_model,
+            chosen_sophos_model,
+            use_cols
+        )
+        st.table(dev_table)
