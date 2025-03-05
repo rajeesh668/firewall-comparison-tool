@@ -180,3 +180,4 @@ if manual_select:
             st.table(build_matching_table(comp_row, chosen_model, use_cols))
         else:
             st.error("❌ Invalid Sophos model selected!")
+            st.markdown("<div class='footer'>Developed by <b>Rajeesh - rajeesh@starlinkme.net</b></div>", unsafe_allow_html=True)
